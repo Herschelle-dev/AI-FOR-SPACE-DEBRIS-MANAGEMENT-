@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORBITGUARD | Space Debris Intelligence</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+body{background:#050912;color:#e8edf7}
+header{height:64px;background:#080e1a;border-bottom:1px solid #1b2a40;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:9}
+header h1{font-size:19px;letter-spacing:2px}header h1 span{color:#4da6ff}
+.on{font-size:13px;color:#9ba8ba}.on i{display:inline-block;width:9px;height:9px;border-radius:50%;background:#29d17d;box-shadow:0 0 10px #29d17d;margin-right:7px}
+.wrap{padding:22px 28px}
+h2{font-size:24px}.sub{color:#78879c;font-size:14px;margin:6px 0 18px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
+.card,.panel{background:#0b1321;border:1px solid #1b2a40;border-radius:10px}
+.card{padding:16px}.card p{color:#7e8ca0;font-size:12px;text-transform:uppercase;letter-spacing:1px}.card h3{font-size:28px;margin-top:8px}
+.blue{color:#4da6ff}.green{color:#29d17d}.yellow{color:#ffca57}.red{color:#ff5964}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:18px}
+.ph{min-height:54px;border-bottom:1px solid #1b2a40;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;gap:10px;flex-wrap:wrap}
+.ph h3{font-size:15px}.ph span{font-size:12px;color:#77869a}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:#9ba8ba}
+button,.btn{border:none;border-radius:6px;padding:9px 13px;background:#14243a;color:#fff;cursor:pointer;font-size:12px}
+button:hover,.btn:hover{background:#1b3657}.primary{background:#176fc1}
+input,select{background:#0a1220;color:#fff;border:1px solid #26364e;border-radius:6px;padding:7px 9px;font-size:12px}
+input[type=number]{width:70px}input[type=file]{display:none}
+canvas{display:block;width:100%;background:#03070e}
+.side{padding:14px;max-height:600px;overflow:auto}
+.rb{background:#111c2d;border:1px solid #23334b;border-radius:8px;padding:12px;margin-bottom:10px;cursor:pointer}
+.rb .t{display:flex;justify-content:space-between;font-weight:bold;font-size:13px}
+.rb .d{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}
+.rb .d div{background:#0a1220;padding:7px;border-radius:5px;font-size:12px}.rb small{display:block;color:#758399;font-size:10px}
+.tag{font-size:10px;padding:3px 8px;border-radius:20px}
+.critical{background:rgba(255,89,100,.15);color:#ff5964}.warning{background:rgba(255,202,87,.15);color:#ffca57}.safe{background:rgba(41,209,125,.15);color:#29d17d}
+#info{background:#0a1220;border:1px solid #23334b;border-radius:8px;padding:12px;font-size:13px;line-height:1.7;margin-bottom:12px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;color:#728197;font-size:11px;text-transform:uppercase;padding:11px 14px;border-bottom:1px solid #1b2a40}
+td{padding:11px 14px;border-bottom:1px solid #131f31;font-size:13px}
+tbody tr{cursor:pointer}tbody tr:hover{background:#0e1929}
+.tw{max-height:320px;overflow:auto}
+.vgrid{display:grid;grid-template-columns:2fr 1fr;gap:0}
+#tlist{padding:12px;max-height:360px;overflow:auto;font-size:12px;border-left:1px solid #1b2a40}
+#tlist div{background:#111c2d;border-radius:6px;padding:8px;margin-bottom:7px;line-height:1.6}
+footer{padding:22px;text-align:center;color:#4e5d72;font-size:11px}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(2,1fr)}.grid,.vgrid{grid-template-columns:1fr}#tlist{border-left:0}}
+</style>
+</head>
+<body>
+<header>
+  <h1>ORBIT<span>GUARD</span></h1>
+  <div class="on"><i></i>SYSTEM ONLINE</div>
+</header>
+
+<div class="wrap">
+  <h2>Space Debris Intelligence Center</h2>
+  <p class="sub">Orbit tracking, path prediction, collision-risk assessment and video-based debris detection</p>
+
+  <div class="stats">
+    <div class="card"><p>Tracked Objects</p><h3 class="blue" id="sTotal">0</h3></div>
+    <div class="card"><p>Active Satellites</p><h3 class="green" id="sSat">0</h3></div>
+    <div class="card"><p>Debris Objects</p><h3 class="yellow" id="sDeb">0</h3></div>
+    <div class="card"><p>Collision Alerts</p><h3 class="red" id="sAlert">0</h3></div>
+    <div class="card"><p>Simulation Clock</p><h3 class="blue" id="sClock" style="font-size:22px;margin-top:14px">T+00:00</h3></div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="ph">
+        <h3>LIVE ORBITAL MAP <span>(click any object)</span></h3>
+        <div class="row">
+          Speed <input type="range" id="speed" min="10" max="300" value="60">
+          <button id="pause">PAUSE</button>
+          <button id="trailBtn">TRAILS: ON</button>
+          <button class="primary" id="regen">NEW SCENARIO</button>
+        </div>
+      </div>
+      <canvas id="map" width="760" height="520"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h3>SELECTED OBJECT</h3><span>sim data</span></div>
+      <div class="side">
+        <div id="info">Click a satellite or debris to see its path, velocity and size.</div>
+        <div class="ph" style="padding:0 0 10px;border:0;min-height:0"><h3>COLLISION PREDICTIONS</h3><span>next 60 min</span></div>
+        <div id="risks"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:18px">
+    <div class="ph">
+      <h3>TRACKED SPACE OBJECTS</h3>
+      <select id="filter"><option value="all">All Objects</option><option value="satellite">Satellites</option><option value="debris">Debris</option><option value="critical">Critical / Warning</option></select>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>ID</th><th>Type</th><th>Altitude</th><th>Velocity</th><th>Inclination</th><th>Size</th><th>Nearest Approach</th><th>Risk</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">
+      <h3>VIDEO DEBRIS DETECTION</h3>
+      <div class="row">
+        <label class="btn primary" for="file">UPLOAD VIDEO</label><input type="file" id="file" accept="video/*">
+        <button id="demoBtn">RUN DEMO FEED</button>
+        <button id="stopBtn">STOP</button>
+        Sensitivity <input type="number" id="thr" value="30" min="5" max="120" title="lower = more sensitive">
+        Size m/px <input type="number" id="sz" value="0.25" step="0.05">
+        Speed km/s per px/s <input type="number" id="sp" value="0.09" step="0.01">
+      </div>
+    </div>
+    <div class="vgrid">
+      <div><canvas id="vc" width="480" height="270"></canvas></div>
+      <div id="tlist">Upload a satellite video (bright objects moving on a dark background) or run the demo feed. Detected debris will appear here.</div>
+    </div>
+    <video id="vid" muted playsinline style="display:none"></video>
+  </div>
+</div>
+
+<footer>ORBITGUARD — Prototype simulation for academic demonstration • Not an operational orbital safety system</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const MU = 398600, RE = 6371;          // km^3/s^2, km
+const CX = 380, CY = 260, EARTH_PX = 90;
+const dispR = alt => 110 + (alt - 400) * 0.33;   // exaggerated drawing scale
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+/* ================= ORBIT SIMULATION ================= */
+const map = $('map'), g = map.getContext('2d');
+let frame = 0, objs = [], risks = {}, simT = 0, paused = false, trails = true, sel = null, lastTs = 0, lastCalc = 0;
+
+function make(id, type, alt, inc, size, ang, dir) {
+  const R = RE + alt, v = Math.sqrt(MU / R);
+  objs.push({ id, type, alt, inc, size, ang, R, v, w: dir * v / R, trail: [] });
+}
+
+function generate() {
+  objs = []; simT = 0; sel = null;
+  const alts = [420, 520, 620, 720];
+  alts.forEach((a, i) => make('SAT-IND-0' + (i + 1), 'satellite', a, [51.6, 53.1, 97.4, 98.1][i], rnd(1.5, 6), rnd(0, 6.28), 1));
+  // retrograde debris at altitudes close to satellites -> head-on conjunctions
+  for (let i = 0; i < 6; i++)
+    make('DEB-2026-' + String(41 + i * 17).padStart(3, '0'), 'debris', alts[i % 4] + rnd(-9, 9), rnd(80, 100), Math.pow(Math.random(), 2) * 2.4 + 0.05, rnd(0, 6.28), -1);
+  // random background debris
+  for (let i = 0; i < 12; i++)
+    make('DEB-2026-' + String(120 + i * 7), 'debris', rnd(400, 800), rnd(40, 100), Math.pow(Math.random(), 2) * 2.4 + 0.05, rnd(0, 6.28), Math.random() < 0.5 ? 1 : -1);
+  buildTable(); calcRisk(); updateStats();
+}
+
+const pos = (o, t) => { const a = o.ang + o.w * t; return [o.R * Math.cos(a), o.R * Math.sin(a)]; };
+const dist = (a, b, t) => { const p = pos(a, t), q = pos(b, t); return Math.hypot(p[0] - q[0], p[1] - q[1]); };
+const px = (o, t = 0) => { const a = o.ang + o.w * (simT + t), r = dispR(o.alt); return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+
+/* closest approach in the next 60 minutes (coarse scan + fine refinement) */
+function closest(a, b) {
+  let best = 1e9, bt = 0;
+  for (let t = 0; t <= 3600; t += 10) { const d = dist(a, b, simT + t); if (d < best) { best = d; bt = t; } }
+  for (let t = Math.max(0, bt - 10); t <= bt + 10; t += 0.25) { const d = dist(a, b, simT + t); if (d < best) { best = d; bt = t; } }
+  return { d: best, t: bt };
+}
+const level = d => d < 5 ? 'critical' : d < 20 ? 'warning' : 'safe';
+const prob = d => 5e-3 * Math.exp(-d / 4);          // toy probability model
+const fmtP = p => { const e = Math.floor(Math.log10(p)); return (p / Math.pow(10, e)).toFixed(1) + ' × 10' + String(e).replace('-', '⁻').replace(/\d/g, c => '⁰¹²³⁴⁵⁶⁷⁸⁹'[c]); };
+const fmtT = s => Math.floor(s / 3600) + 'h ' + String(Math.floor(s % 3600 / 60)).padStart(2, '0') + 'm';
+
+function calcRisk() {
+  risks = {};
+  const sats = objs.filter(o => o.type === 'satellite');
+  objs.filter(o => o.type === 'debris').forEach(db => {
+    let best = null;
+    sats.forEach(s => { if (best && Math.abs(db.R - s.R) >= best.d) return; const c = closest(db, s); if (!best || c.d < best.d) best = { ...c, sat: s }; });
+    best.level = level(best.d); best.p = prob(best.d);
+    risks[db.id] = best;
+  });
+  // satellite risk = worst debris against it
+  sats.forEach(s => {
+    let w = null;
+    Object.keys(risks).forEach(k => { const r = risks[k]; if (r.sat === s && (!w || r.d < w.d)) w = { ...r, deb: k }; });
+    risks[s.id] = w;
+  });
+  renderRisks(); updateTable(); updateStats();
+}
+
+function renderRisks() {
+  const list = objs.filter(o => o.type === 'debris').map(o => ({ o, r: risks[o.id] })).sort((a, b) => a.r.d - b.r.d).slice(0, 4);
+  $('risks').innerHTML = list.map(({ o, r }) => `
+    <div class="rb" onclick="select('${o.id}')">
+      <div class="t">${o.id}<span class="tag ${r.level}">${r.level.toUpperCase()}</span></div>
+      <div class="d">
+        <div><small>Target</small>${r.sat.id}</div>
+        <div><small>Closest Approach</small>${r.d.toFixed(1)} km</div>
+        <div><small>Time to CA</small>${fmtT(r.t)}</div>
+        <div><small>Probability</small>${fmtP(r.p)}</div>
+        <div><small>Debris size</small>${o.size.toFixed(2)} m</div>
+        <div><small>Rel. velocity</small>${(o.v + r.sat.v * (o.w * r.sat.w < 0 ? 1 : 0)).toFixed(1)} km/s</div>
+      </div></div>`).join('');
+}
+
+function updateStats() {
+  const al = Object.keys(risks).filter(k => k.startsWith('DEB') && risks[k].level !== 'safe').length;
+  $('sTotal').textContent = objs.length;
+  $('sSat').textContent = objs.filter(o => o.type === 'satellite').length;
+  $('sDeb').textContent = objs.filter(o => o.type === 'debris').length;
+  $('sAlert').textContent = al;
+}
+
+/* ---------- table ---------- */
+function buildTable() {
+  $('tbody').innerHTML = objs.map(o => `<tr id="r_${o.id}" data-type="${o.type}" onclick="select('${o.id}')">
+    <td class="blue"><b>${o.id}</b></td><td>${o.type === 'satellite' ? 'Satellite' : 'Debris'}</td>
+    <td>${o.alt.toFixed(0)} km</td><td>${o.v.toFixed(2)} km/s${o.w < 0 ? ' (retro)' : ''}</td>
+    <td>${o.inc.toFixed(1)}°</td><td>${o.size.toFixed(2)} m</td><td class="ca"></td><td class="rk"></td></tr>`).join('');
+}
+function updateTable() {
+  objs.forEach(o => {
+    const r = risks[o.id], row = $('r_' + o.id); if (!row || !r) return;
+    row.dataset.risk = r.level;
+    row.querySelector('.ca').textContent = r.d.toFixed(1) + ' km';
+    row.querySelector('.rk').innerHTML = `<span class="tag ${r.level}">${r.level.toUpperCase()}</span>`;
+  });
+  applyFilter();
+}
+function applyFilter() {
+  const f = $('filter').value;
+  document.querySelectorAll('#tbody tr').forEach(r => {
+    r.style.display = f === 'all' || f === r.dataset.type || (f === 'critical' && r.dataset.risk !== 'safe') ? '' : 'none';
+  });
+}
+$('filter').onchange = applyFilter;
+
+/* ---------- selection ---------- */
+function select(id) {
+  sel = objs.find(o => o.id === id) || null;
+  if (sel) { sel.trail = []; showInfo(); }
+}
+function showInfo() {
+  if (!sel) return;
+  const r = risks[sel.id], col = r ? { critical: 'red', warning: 'yellow', safe: 'green' }[r.level] : '';
+  $('info').innerHTML = `<b class="blue">${sel.id}</b> (${sel.type})<br>
+    Size: <b>${sel.size.toFixed(2)} m</b><br>
+    Velocity: <b>${sel.v.toFixed(2)} km/s</b> • Direction: ${sel.w > 0 ? 'prograde' : 'retrograde'}<br>
+    Altitude: <b>${sel.alt.toFixed(0)} km</b> • Inclination: ${sel.inc.toFixed(1)}°<br>
+    Orbital period: ${(2 * Math.PI * sel.R / sel.v / 60).toFixed(1)} min<br>
+    ${r ? `Nearest approach: <b class="${col}">${r.d.toFixed(1)} km</b> with ${r.sat.id === sel.id ? r.deb : r.sat.id} in ${fmtT(r.t)}` : ''}`;
+}
+
+map.addEventListener('click', e => {
+  const b = map.getBoundingClientRect(), x = (e.clientX - b.left) * map.width / b.width, y = (e.clientY - b.top) * map.height / b.height;
+  let best = null, bd = 18;
+  objs.forEach(o => { const p = px(o), d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = o; } });
+  if (best) select(best.id);
+});
+
+/* ---------- drawing ---------- */
+const stars = Array.from({ length: 90 }, () => [rnd(0, 760), rnd(0, 520), Math.random()]);
+function draw() {
+  g.clearRect(0, 0, 760, 520);
+  g.fillStyle = '#03070e'; g.fillRect(0, 0, 760, 520);
+  stars.forEach(s => { g.fillStyle = `rgba(255,255,255,${0.15 + s[2] * 0.4})`; g.fillRect(s[0], s[1], 1.3, 1.3); });
+  [400, 500, 600, 700, 800].forEach(a => { g.strokeStyle = 'rgba(77,166,255,.18)'; g.setLineDash([4, 6]); g.beginPath(); g.arc(CX, CY, dispR(a), 0, 7); g.stroke(); });
+  g.setLineDash([]);
+  const eg = g.createRadialGradient(CX - 25, CY - 30, 5, CX, CY, EARTH_PX);
+  eg.addColorStop(0, '#5fc3ff'); eg.addColorStop(.5, '#0d477d'); eg.addColorStop(1, '#061d38');
+  g.fillStyle = eg; g.shadowColor = 'rgba(50,150,255,.5)'; g.shadowBlur = 30; g.beginPath(); g.arc(CX, CY, EARTH_PX, 0, 7); g.fill(); g.shadowBlur = 0;
+  g.fillStyle = 'rgba(255,255,255,.6)'; g.font = '11px Arial'; g.textAlign = 'center'; g.fillText('EARTH', CX, CY + 4);
+
+  // lines between risky pairs
+  objs.forEach(o => {
+    const r = risks[o.id];
+    if (o.type === 'debris' && r && r.level !== 'safe') {
+      const a = px(o), b = px(r.sat);
+      g.strokeStyle = r.level === 'critical' ? 'rgba(255,89,100,.5)' : 'rgba(255,202,87,.35)';
+      g.setLineDash([3, 4]); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]);
+    }
+  });
+
+  objs.forEach(o => {
+    const p = px(o), r = risks[o.id];
+    const col = o.type === 'satellite' ? '#4da6ff' : r && r.level === 'critical' ? '#ff5964' : r && r.level === 'warning' ? '#ffca57' : '#9a6a70';
+    // past trail
+    if (trails && o.trail.length > 1) {
+      g.strokeStyle = col; g.lineWidth = 1.2; g.globalAlpha = 0.45; g.beginPath();
+      o.trail.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]));
+      g.stroke(); g.globalAlpha = 1;
+    }
+    // predicted path for selected object (next ~25 min)
+    if (o === sel) {
+      g.strokeStyle = '#fff'; g.setLineDash([2, 5]); g.beginPath();
+      for (let t = 0; t <= 1500; t += 20) { const q = px(o, t); t ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }
+      g.stroke(); g.setLineDash([]);
+    }
+    const rad = o.type === 'satellite' ? 5 + o.size * 0.5 : 2.5 + o.size * 1.6;
+    g.fillStyle = col;
+    if (o.type === 'satellite') g.fillRect(p[0] - rad / 2, p[1] - rad / 2, rad, rad);
+    else { g.beginPath(); g.arc(p[0], p[1], rad, 0, 7); g.fill(); }
+    g.shadowBlur = 0;
+    if (o === sel) {
+      g.strokeStyle = '#fff'; g.lineWidth = 1.2; g.beginPath(); g.arc(p[0], p[1], rad + 6, 0, 7); g.stroke();
+      g.fillStyle = '#fff'; g.font = '11px Arial'; g.textAlign = 'left';
+      g.fillText(`${o.id} | ${o.v.toFixed(2)} km/s | ${o.size.toFixed(2)} m`, p[0] + 12, p[1] - 10);
+    }
+  });
+  g.fillStyle = '#74849b'; g.font = '11px Arial'; g.textAlign = 'left';
+  g.fillText('LEO OBJECT TRACKING • SIMULATION MODE', 14, 20);
+  g.fillText('● satellite   ● debris (red=critical, yellow=warning)   dotted white = predicted path', 14, 506);
+}
+
+function tick(ts) {
+  const dt = Math.min((ts - lastTs) / 1000, 0.1); lastTs = ts;
+  if (!paused) {
+    simT += dt * $('speed').value;
+    if (frame++ % 3 === 0) objs.forEach(o => { o.trail.push(px(o)); if (o.trail.length > 40) o.trail.shift(); });
+    if (ts - lastCalc > 5000) { calcRisk(); lastCalc = ts; if (sel) showInfo(); }
+    $('sClock').textContent = 'T+' + String(Math.floor(simT / 3600)).padStart(2, '0') + ':' + String(Math.floor(simT % 3600 / 60)).padStart(2, '0');
+  }
+  draw(); requestAnimationFrame(tick);
+}
+$('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'RESUME' : 'PAUSE'; };
+$('trailBtn').onclick = e => { trails = !trails; e.target.textContent = 'TRAILS: ' + (trails ? 'ON' : 'OFF'); };
+$('regen').onclick = () => { generate(); $('info').textContent = 'New scenario generated. Click an object.'; };
+generate(); requestAnimationFrame(tick);
+
+/* ================= VIDEO DEBRIS DETECTION ================= */
+const W = 480, H = 270, GW = W >> 1, GH = H >> 1;
+const vid = $('vid'), vc = $('vc'), vg = vc.getContext('2d');
+const off = document.createElement('canvas'); off.width = W; off.height = H;
+const og = off.getContext('2d', { willReadFrequently: true });
+let prev = null, tracks = [], nextId = 1, running = false, demo = false, lastT = -1, loopId = 0, lastProc = 0, lastList = 0;
+
+// synthetic demo feed: static stars + moving bright debris
+const dStars = Array.from({ length: 70 }, () => [rnd(0, W), rnd(0, H), rnd(1, 2)]);
+const dDeb = Array.from({ length: 4 }, () => ({ x: rnd(0, W), y: rnd(0, H), vx: rnd(-90, 90), vy: rnd(-50, 50), s: rnd(3, 8) }));
+function drawDemo(c, t) {
+  c.fillStyle = '#02040a'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#6b7690'; dStars.forEach(s => c.fillRect(s[0], s[1], s[2], s[2]));
+  c.fillStyle = '#fff';
+  dDeb.forEach(d => { const x = ((d.x + d.vx * t) % W + W) % W, y = ((d.y + d.vy * t) % H + H) % H; c.fillRect(x, y, d.s, d.s); });
+}
+
+function startFeed() { prev = null; tracks = []; nextId = 1; lastT = -1; running = true; $('tlist').textContent = 'Analyzing...'; const id = ++loopId; requestAnimationFrame(ts => vloop(ts, id)); }
+$('file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  demo = false; vid.src = URL.createObjectURL(f); vid.loop = true;
+  vid.onloadeddata = () => { vid.onloadeddata = null; vid.play(); startFeed(); };
+};
+$('demoBtn').onclick = () => { vid.pause(); demo = true; startFeed(); };
+$('stopBtn').onclick = () => { running = false; vid.pause(); };
+
+function detect() {
+  const d = og.getImageData(0, 0, W, H).data, gray = new Uint8Array(GW * GH);
+  for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) { const i = (y * 2 * W + x * 2) * 4; gray[y * GW + x] = (d[i] + d[i + 1] + d[i + 2]) / 3; }
+  if (!prev) { prev = gray; return []; }
+  const th = +$('thr').value, mask = new Uint8Array(GW * GH);
+  for (let i = 0; i < mask.length; i++) mask[i] = gray[i] - prev[i] > th ? 1 : 0;   // newly brightened pixels = moving bright object
+  prev = gray;
+  const blobs = [];
+  for (let s = 0; s < mask.length; s++) {
+    if (!mask[s]) continue;
+    const st = [s]; mask[s] = 0; let n = 0, sx = 0, sy = 0, x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    while (st.length) {
+      const i = st.pop(), x = i % GW, y = (i / GW) | 0; n++; sx += x; sy += y;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+        const j = ny * GW + nx; if (mask[j]) { mask[j] = 0; st.push(j); }
+      }
+    }
+    if (n >= 2) blobs.push({ cx: sx / n * 2, cy: sy / n * 2, w: (x1 - x0 + 1) * 2, h: (y1 - y0 + 1) * 2 });
+  }
+  return blobs;
+}
+
+function vloop(ts, id) {
+  if (!running || id !== loopId) return;      // stale loops stop themselves
+  requestAnimationFrame(t2 => vloop(t2, id));
+  if (ts - lastProc < 50) return;             // ~20 fps analysis
+  lastProc = ts;
+  const t = demo ? ts / 1000 : vid.currentTime;
+  if (t === lastT) return;
+  const dt = lastT < 0 ? 0 : Math.abs(t - lastT); lastT = t;
+  if (demo) drawDemo(og, t); else og.drawImage(vid, 0, 0, W, H);
+  vg.drawImage(off, 0, 0);
+  if (dt <= 0 || dt > 0.5) { prev = null; return; }   // video looped / seeked
+
+  const blobs = detect(), used = new Set();
+  blobs.forEach(b => {
+    let best = null, bd = 45;
+    tracks.forEach(k => { if (used.has(k)) return; const d = Math.hypot(k.x - b.cx, k.y - b.cy); if (d < bd) { bd = d; best = k; } });
+    if (best) {
+      const vx = (b.cx - best.x) / dt, vy = (b.cy - best.y) / dt;
+      best.vx = best.vx * 0.7 + vx * 0.3; best.vy = best.vy * 0.7 + vy * 0.3;
+      best.x = b.cx; best.y = b.cy; best.w = b.w; best.h = b.h; best.miss = 0; best.hits++;
+      best.path.push([b.cx, b.cy]); if (best.path.length > 60) best.path.shift(); used.add(best);
+    } else {
+      const k = { id: nextId++, x: b.cx, y: b.cy, w: b.w, h: b.h, vx: 0, vy: 0, miss: 0, hits: 1, path: [[b.cx, b.cy]] };
+      tracks.push(k); used.add(k);
+    }
+  });
+  tracks.forEach(k => { if (!used.has(k)) k.miss++; });
+  tracks = tracks.filter(k => k.miss < 15);
+
+  const sz = +$('sz').value, sp = +$('sp').value, confirmed = tracks.filter(k => k.hits >= 4);
+  vg.font = '11px Arial'; vg.lineWidth = 1.3;
+  confirmed.forEach(k => {
+    const size = Math.max(k.w, k.h) * sz, spd = Math.hypot(k.vx, k.vy) * sp;
+    vg.strokeStyle = 'rgba(255,202,87,.8)'; vg.beginPath();
+    k.path.forEach((p, i) => i ? vg.lineTo(p[0], p[1]) : vg.moveTo(p[0], p[1])); vg.stroke();
+    // predicted path (next 1.5 s)
+    vg.strokeStyle = 'rgba(255,255,255,.6)'; vg.setLineDash([3, 4]); vg.beginPath(); vg.moveTo(k.x, k.y); vg.lineTo(k.x + k.vx * 1.5, k.y + k.vy * 1.5); vg.stroke(); vg.setLineDash([]);
+    vg.strokeStyle = '#ff5964'; vg.strokeRect(k.x - k.w / 2 - 4, k.y - k.h / 2 - 4, k.w + 8, k.h + 8);
+    vg.fillStyle = '#ff5964'; vg.fillText(`D${k.id} ${size.toFixed(1)}m ${spd.toFixed(1)}km/s`, k.x + k.w / 2 + 8, k.y - 4);
+  });
+  vg.fillStyle = '#fff'; vg.fillText(`Detected debris: ${confirmed.length}`, 10, 18);
+  if (ts - lastList < 400) return; lastList = ts;
+  $('tlist').innerHTML = confirmed.length ? confirmed.map(k => {
+    const ang = (Math.atan2(k.vy, k.vx) * 180 / Math.PI + 360) % 360;
+    return `<div><b class="red">DEBRIS D${k.id}</b><br>Size: ${(Math.max(k.w, k.h) * sz).toFixed(1)} m<br>
+      Velocity: ${(Math.hypot(k.vx, k.vy) * sp).toFixed(2)} km/s<br>Heading: ${ang.toFixed(0)}° • Path points: ${k.path.length}</div>`;
+  }).join('') : 'No debris confirmed yet...';
+}
+</script>
+</body>
+</html>
